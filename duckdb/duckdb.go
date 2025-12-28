@@ -15,7 +15,7 @@ var (
 	dbOnce     sync.Once
 )
 
-func TestDBConnection() {
+func InitDuckDB() {
 	db := GetDuckDB()
 	defer db.Close()
 
@@ -23,17 +23,23 @@ func TestDBConnection() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	_, err = db.Exec(`INSERT INTO people VALUES (42, 'John')`)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func TestDBConnection() {
+	db := GetDuckDB()
+	defer db.Close()
 
 	var (
 		id   int
 		name string
 	)
 	row := db.QueryRow(`SELECT id, name FROM people`)
-	err = row.Scan(&id, &name)
+	err := row.Scan(&id, &name)
 	if errors.Is(err, sql.ErrNoRows) {
 		log.Println("no rows")
 	} else if err != nil {
