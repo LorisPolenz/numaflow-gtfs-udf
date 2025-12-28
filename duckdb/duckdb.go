@@ -15,21 +15,6 @@ var (
 	dbOnce     sync.Once
 )
 
-func InitDuckDB() {
-	fmt.Println("Initializing DuckDB, creating table...")
-	db := GetDuckDB()
-
-	_, err := db.Exec(`CREATE TABLE people (id INTEGER, name VARCHAR)`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = db.Exec(`INSERT INTO people VALUES (42, 'John')`)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func TestDBConnection() {
 	db := GetDuckDB()
 
@@ -63,9 +48,9 @@ func GetDuckDB() *sql.DB {
 			log.Fatal(err)
 		}
 
-		// duckDBConn.Exec("ATTACH DATABASE 'feeds.db' AS persistent_db;")
-		// duckDBConn.Exec("COPY FROM DATABASE persistent_db TO memory;")
-		// duckDBConn.Exec("DETACH persistent_db;")
+		duckDBConn.Exec("ATTACH DATABASE 'feeds.db' AS persistent_db;")
+		duckDBConn.Exec("COPY FROM DATABASE persistent_db TO memory;")
+		duckDBConn.Exec("DETACH persistent_db;")
 	})
 
 	return duckDBConn

@@ -52,8 +52,6 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	db.Exec("SHOW TABLES;")
 
-	duckdb.InitDuckDB()
-
 	duckdb.TestDBConnection()
 	duckdb.TestDBConnection()
 	duckdb.TestDBConnection()
