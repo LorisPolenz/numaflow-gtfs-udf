@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"numaflow_gtfs_udf/duckdb"
 	"os"
 	"path"
 	"sync"
@@ -47,9 +48,9 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	// fmt.Println("Decoded RecentFeeds data:", recentFeeds)
 
-	// db := duckdb.GetDuckDB()
+	db := duckdb.GetDuckDB()
 
-	// db.Exec("SHOW TABLES;")
+	db.Exec("SHOW TABLES;")
 
 	// duckdb.TestDBConnection()
 	// duckdb.TestDBConnection()
