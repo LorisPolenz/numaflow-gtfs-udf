@@ -17,7 +17,6 @@ var (
 
 func InitDuckDB() {
 	db := GetDuckDB()
-	defer db.Close()
 
 	_, err := db.Exec(`CREATE TABLE people (id INTEGER, name VARCHAR)`)
 	if err != nil {
@@ -32,7 +31,6 @@ func InitDuckDB() {
 
 func TestDBConnection() {
 	db := GetDuckDB()
-	defer db.Close()
 
 	var (
 		id   int
