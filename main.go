@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
-	"fmt"
 	"log"
-	"numaflow_gtfs_udf/duckdb"
 	"os"
 	"path"
 	"sync"
@@ -38,28 +34,28 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	siData := sideInputData
 	mu.RUnlock()
 
-	// Decode side input data
-	var recentFeeds RecentFeeds
-	decoder := gob.NewDecoder(bytes.NewReader(siData))
+	// // Decode side input data
+	// var recentFeeds RecentFeeds
+	// decoder := gob.NewDecoder(bytes.NewReader(siData))
 
-	err := decoder.Decode(&recentFeeds)
+	// err := decoder.Decode(&recentFeeds)
 
-	if err != nil {
-		fmt.Println("Error decoding recent feeds:", err)
-		os.Exit(1)
-	}
+	// if err != nil {
+	// 	fmt.Println("Error decoding recent feeds:", err)
+	// 	os.Exit(1)
+	// }
 
-	fmt.Println("Decoded RecentFeeds data:", recentFeeds)
+	// fmt.Println("Decoded RecentFeeds data:", recentFeeds)
 
-	db := duckdb.GetDuckDB()
+	// db := duckdb.GetDuckDB()
 
-	db.Exec("SHOW TABLES;")
+	// db.Exec("SHOW TABLES;")
 
-	duckdb.TestDBConnection()
-	duckdb.TestDBConnection()
-	duckdb.TestDBConnection()
-	duckdb.TestDBConnection()
-	duckdb.TestDBConnection()
+	// duckdb.TestDBConnection()
+	// duckdb.TestDBConnection()
+	// duckdb.TestDBConnection()
+	// duckdb.TestDBConnection()
+	// duckdb.TestDBConnection()
 
 	if len(siData) > 0 {
 		if string(siData) == "even" {
