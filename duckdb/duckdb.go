@@ -16,6 +16,7 @@ var (
 )
 
 func InitDuckDB() {
+	fmt.Println("Initializing DuckDB, creating table...")
 	db := GetDuckDB()
 
 	_, err := db.Exec(`CREATE TABLE people (id INTEGER, name VARCHAR)`)
