@@ -52,11 +52,11 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	db.Exec("SHOW TABLES;")
 
-	// duckdb.TestDBConnection()
-	// duckdb.TestDBConnection()
-	// duckdb.TestDBConnection()
-	// duckdb.TestDBConnection()
-	// duckdb.TestDBConnection()
+	duckdb.TestDBConnection()
+	duckdb.TestDBConnection()
+	duckdb.TestDBConnection()
+	duckdb.TestDBConnection()
+	duckdb.TestDBConnection()
 
 	if len(siData) > 0 {
 		if string(siData) == "even" {
