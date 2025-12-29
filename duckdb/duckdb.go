@@ -15,13 +15,14 @@ var (
 	dbOnce     sync.Once
 )
 
-func TestDBConnection() {
+func TestDBConnection() (int, string) {
 	db := GetDuckDB()
 
 	var (
 		id   int
 		name string
 	)
+
 	row := db.QueryRow(`SELECT id, name FROM people`)
 	err := row.Scan(&id, &name)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -30,7 +31,7 @@ func TestDBConnection() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("id: %d, name: %s\n", id, name)
+	return id, name
 }
 
 func GetDuckDB() *sql.DB {
