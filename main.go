@@ -48,14 +48,11 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	// fmt.Println("Decoded RecentFeeds data:", recentFeeds)
 
-	db := duckdb.GetDuckDB()
-
-	db.Exec("SHOW TABLES;")
-
-	id, name := duckdb.TestDBConnection()
+	id, name := duckdb.TestDBConnection("20251002")
 
 	log.Printf("From DuckDB - id: %d, name: %s\n", id, name)
 	log.Printf("Processing message: %s\n", string(msg))
+	log.Printf("Side input data: %s\n", string(siData))
 
 	if len(siData) > 0 {
 		if string(siData) == "even" {
@@ -72,6 +69,8 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 }
 
 func main() {
+	duckdb.InitDBHousekeeper()
+
 	// Create a new fsnotify watcher
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
