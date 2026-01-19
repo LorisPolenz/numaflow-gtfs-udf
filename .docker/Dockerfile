@@ -18,6 +18,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y libstdc++6 && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/main /app
+COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 COPY --from=builder /app/20251002_feed.db /20251002_feed.db
 
 RUN chmod +x /app
