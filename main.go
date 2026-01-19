@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"numaflow_gtfs_udf/duckdb"
+	"numaflow_gtfs_udf/helpers"
 	"os"
 	"path"
 	"sync"
@@ -48,9 +49,9 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	// fmt.Println("Decoded RecentFeeds data:", recentFeeds)
 
-	id, name := duckdb.TestDBConnection("20251002")
+	id, name := duckdb.TestDBConnection(string(msg))
 
-	log.Printf("From DuckDB - id: %d, name: %s\n", id, name)
+	log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
 	log.Printf("Processing message: %s\n", string(msg))
 	log.Printf("Side input data: %s\n", string(siData))
 
@@ -69,6 +70,7 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 }
 
 func main() {
+	helpers.VerifyEnv()
 	duckdb.InitDBHousekeeper()
 
 	// Create a new fsnotify watcher

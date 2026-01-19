@@ -3,9 +3,9 @@ package duckdb
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -32,6 +32,12 @@ func InitDBHousekeeper() {
 					log.Printf("Closing idle DuckDB connection for key: %s\n", feedVersion)
 					cachedDB.db.Close()
 					delete(dbMap, feedVersion)
+					// Delete DB File as well
+					err := os.RemoveAll(feedVersion + "_feed.db")
+
+					if err != nil {
+						log.Printf("Error deleting DB file for key %s: %v\n", feedVersion, err)
+					}
 				}
 			}
 			dbMutex.Unlock()
@@ -39,23 +45,28 @@ func InitDBHousekeeper() {
 	}()
 }
 
-func TestDBConnection(feedVersion string) (int, string) {
+func TestDBConnection(feedVersion string) (string, string) {
 	db := GetDuckDB(feedVersion)
 
 	var (
-		id   int
-		name string
+		trip_id        string
+		arrival_time   string
+		departure_time string
+		stop_id        string
+		stop_sequence  int
+		pickup_type    int
+		drop_off_type  int
 	)
 
-	row := db.QueryRow(`SELECT id, name FROM people`)
-	err := row.Scan(&id, &name)
+	row := db.QueryRow(`SELECT trip_id, arrival_time, departure_time, stop_id, stop_sequence, pickup_type, drop_off_type FROM stop_times USING SAMPLE 1;`)
+	err := row.Scan(&trip_id, &arrival_time, &departure_time, &stop_id, &stop_sequence, &pickup_type, &drop_off_type)
 	if errors.Is(err, sql.ErrNoRows) {
 		log.Println("no rows")
 	} else if err != nil {
 		log.Fatal(err)
 	}
 
-	return id, name
+	return trip_id, stop_id
 }
 
 func GetDuckDB(feedVersion string) *sql.DB {
@@ -73,7 +84,8 @@ func GetDuckDB(feedVersion string) *sql.DB {
 	// Create new connection
 	slog.Info("Creating new DB connection", "feedVersion", feedVersion)
 
-	dbPath := fmt.Sprintf("%s_feed.db", feedVersion)
+	dbPath := BuildNewFeedVersion(feedVersion)
+
 	duckDBConn, err := sql.Open("duckdb", dbPath)
 
 	if err != nil {
