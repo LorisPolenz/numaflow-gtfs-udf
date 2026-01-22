@@ -6,6 +6,11 @@ import (
 	"log"
 )
 
+type TransitFeedEntity struct {
+	FeedVersion string
+	*FeedEntity
+}
+
 func UnmarshallFeedEntity(data []byte) (*FeedEntity, error) {
 	var feedEntity FeedEntity
 

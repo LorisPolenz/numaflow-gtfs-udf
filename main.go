@@ -22,11 +22,15 @@ type RecentFeeds struct {
 func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	msg := d.Value()
 
-	// id, name := duckdb.TestDBConnection(string(msg))
-
-	// log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
+	log.Printf("Processing msg with len: %d", len(msg))
 
 	feedEntity, err := helpers.UnmarshallFeedEntity(msg)
+
+	log.Printf("Processing record with FeedVersion: %s", feedEntity.FeedVersion)
+
+	id, name := duckdb.TestDBConnection(feedEntity.FeedVersion)
+
+	log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
 
 	if err != nil {
 		log.Panic("Failed to unmarshal feed entity: ", err)
