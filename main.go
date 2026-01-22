@@ -26,7 +26,12 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	// log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
 
-	feedEntity := helpers.UnmarshallFeedEntity(msg)
+	feedEntity, err := helpers.UnmarshallFeedEntity(msg)
+
+	if err != nil {
+		log.Panic("Failed to unmarshal feed entity: ", err)
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+	}
 
 	log.Printf("Entity - id: %s", feedEntity.GetId())
 	log.Printf("StopTimeUpdate - Count %d, ", len(feedEntity.TripUpdate.GetStopTimeUpdate()))
@@ -35,6 +40,7 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	if err != nil {
 		log.Panic("Failed to marshal feed entity: ", err)
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
 	return mapper.MessagesBuilder().Append(mapper.NewMessage(feedEntityJson))
