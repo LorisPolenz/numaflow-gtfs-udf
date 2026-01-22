@@ -10,15 +10,6 @@ import (
 	"github.com/numaproj/numaflow-go/pkg/mapper"
 )
 
-type FeedMetadata struct {
-	FeedName    string
-	LastUpdated string
-}
-
-type RecentFeeds struct {
-	Feeds []FeedMetadata
-}
-
 func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	msg := d.Value()
 
@@ -26,9 +17,9 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 
 	feedEntity, err := helpers.UnmarshallFeedEntity(msg)
 
-	log.Printf("Processing record with FeedVersion: %s", feedEntity.FeedVersion)
+	log.Printf("Processing record with FeedVersion: %s", feedEntity.GetFeedVersion())
 
-	id, name := duckdb.TestDBConnection(feedEntity.FeedVersion)
+	id, name := duckdb.TestDBConnection(feedEntity.GetFeedVersion())
 
 	log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
 

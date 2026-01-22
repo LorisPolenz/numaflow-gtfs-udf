@@ -7,12 +7,19 @@ import (
 )
 
 type TransitFeedEntity struct {
-	FeedVersion string
+	FeedVersion *string
 	*FeedEntity
 }
 
-func UnmarshallFeedEntity(data []byte) (*FeedEntity, error) {
-	var feedEntity FeedEntity
+func (x *TransitFeedEntity) GetFeedVersion() string {
+	if x != nil && x.FeedVersion != nil {
+		return *x.FeedVersion
+	}
+	return ""
+}
+
+func UnmarshallFeedEntity(data []byte) (*TransitFeedEntity, error) {
+	var feedEntity TransitFeedEntity
 
 	gobDec := gob.NewDecoder(bytes.NewBuffer(data))
 
