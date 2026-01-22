@@ -1,18 +1,21 @@
 package helpers
 
 import (
+	"bytes"
+	"encoding/gob"
 	"log"
-
-	"google.golang.org/protobuf/proto"
 )
 
 func UnmarshallFeedEntity(data []byte) (*FeedEntity, error) {
-	feedEntity := &FeedEntity{}
+	var feedBytes bytes.Buffer
+	var feedEntity FeedEntity
 
-	if err := proto.Unmarshal(data, feedEntity); err != nil {
+	gobDec := gob.NewDecoder(&feedBytes)
+
+	if err := gobDec.Decode(&feedEntity); err != nil {
 		log.Fatalln("Failed to unmarshal feed entity:", err)
 		return nil, err
 	}
 
-	return feedEntity, nil
+	return &feedEntity, nil
 }
