@@ -7,10 +7,9 @@ import (
 )
 
 func UnmarshallFeedEntity(data []byte) (*FeedEntity, error) {
-	var feedBytes bytes.Buffer
 	var feedEntity FeedEntity
 
-	gobDec := gob.NewDecoder(&feedBytes)
+	gobDec := gob.NewDecoder(bytes.NewBuffer(data))
 
 	if err := gobDec.Decode(&feedEntity); err != nil {
 		log.Fatalln("Failed to unmarshal feed entity:", err)
