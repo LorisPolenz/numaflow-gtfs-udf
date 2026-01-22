@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"numaflow_gtfs_udf/duckdb"
 	"numaflow_gtfs_udf/helpers"
@@ -27,7 +26,7 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	slog.Info(fmt.Sprintf("From DuckDB - id: %s, name: %s\n", id, name))
 
 	if err != nil {
-		log.Print("Failed to unmarshal feed entity: ", err)
+		slog.Error(fmt.Sprintf("Failed to unmarshal feed entity: %s", err))
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
@@ -37,7 +36,7 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	feedEntityJson, err := json.Marshal(feedEntity)
 
 	if err != nil {
-		slog.Info(fmt.Sprintf("Failed to marshal feed entity: ", err))
+		slog.Info(fmt.Sprintf("Failed to marshal feed entity: %s", err))
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 

@@ -25,7 +25,7 @@ func UnmarshallFeedEntity(data []byte) (*TransitFeedEntity, error) {
 	gobDec := gob.NewDecoder(bytes.NewBuffer(data))
 
 	if err := gobDec.Decode(&feedEntity); err != nil {
-		slog.Error(fmt.Sprintf("Failed to unmarshal feed entity:", err))
+		slog.Error(fmt.Sprintf("Failed to unmarshal feed entity: %s", err))
 		return nil, err
 	}
 
