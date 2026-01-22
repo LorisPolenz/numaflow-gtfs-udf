@@ -22,9 +22,9 @@ type RecentFeeds struct {
 func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	msg := d.Value()
 
-	id, name := duckdb.TestDBConnection(string(msg))
+	// id, name := duckdb.TestDBConnection(string(msg))
 
-	log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
+	// log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
 
 	feedEntity := helpers.UnmarshallFeedEntity(msg)
 
