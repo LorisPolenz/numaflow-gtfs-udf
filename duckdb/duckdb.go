@@ -3,7 +3,7 @@ package duckdb
 import (
 	"database/sql"
 	"errors"
-	"log"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -29,14 +29,14 @@ func InitDBHousekeeper() {
 			dbMutex.Lock()
 			for feedVersion, cachedDB := range dbMap {
 				if time.Since(cachedDB.lastAccess) > 24*time.Hour {
-					log.Printf("Closing idle DuckDB connection for key: %s\n", feedVersion)
+					slog.Info(fmt.Sprintf("Closing idle DuckDB connection for key: %s\n", feedVersion))
 					cachedDB.db.Close()
 					delete(dbMap, feedVersion)
 					// Delete DB File as well
 					err := os.RemoveAll(feedVersion + "_feed.db")
 
 					if err != nil {
-						log.Printf("Error deleting DB file for key %s: %v\n", feedVersion, err)
+						slog.Error(fmt.Sprintf("Error deleting DB file for key %s: %v\n", feedVersion, err))
 					}
 				}
 			}
@@ -45,8 +45,13 @@ func InitDBHousekeeper() {
 	}()
 }
 
-func TestDBConnection(feedVersion string) (string, string) {
-	db := GetDuckDB(feedVersion)
+func TestDBConnection(feedVersion string) (string, string, error) {
+	db, err := GetDuckDB(feedVersion)
+
+	if err != nil {
+		slog.Error(fmt.Sprintf("Could not get DuckDB connection: %s", err))
+		return "", "", err
+	}
 
 	var (
 		trip_id        string
@@ -59,17 +64,18 @@ func TestDBConnection(feedVersion string) (string, string) {
 	)
 
 	row := db.QueryRow(`SELECT trip_id, arrival_time, departure_time, stop_id, stop_sequence, pickup_type, drop_off_type FROM stop_times USING SAMPLE 1;`)
-	err := row.Scan(&trip_id, &arrival_time, &departure_time, &stop_id, &stop_sequence, &pickup_type, &drop_off_type)
+	err = row.Scan(&trip_id, &arrival_time, &departure_time, &stop_id, &stop_sequence, &pickup_type, &drop_off_type)
 	if errors.Is(err, sql.ErrNoRows) {
-		log.Println("no rows")
+		slog.Info("No rows returned from test query")
 	} else if err != nil {
-		log.Fatal(err)
+		slog.Error(fmt.Sprintf("Found error in query: %s", err))
+		return "", "", err
 	}
 
-	return trip_id, stop_id
+	return trip_id, stop_id, nil
 }
 
-func GetDuckDB(feedVersion string) *sql.DB {
+func GetDuckDB(feedVersion string) (*sql.DB, error) {
 
 	dbMutex.Lock()
 	defer dbMutex.Unlock()
@@ -78,24 +84,31 @@ func GetDuckDB(feedVersion string) *sql.DB {
 	if cachedDB, exists := dbMap[feedVersion]; exists {
 		slog.Debug("Returning cached DB connection", "feedVersion", feedVersion)
 		cachedDB.lastAccess = time.Now()
-		return cachedDB.db
+		return cachedDB.db, nil
 	}
 
 	// Create new connection
 	slog.Info("Creating new DB connection", "feedVersion", feedVersion)
 
-	dbPath := BuildNewFeedVersion(feedVersion)
+	dbPath, err := BuildNewFeedVersion(feedVersion)
+
+	if err != nil {
+		slog.Error(fmt.Sprintf("Could not build new feed version: %s", err))
+		return nil, err
+	}
 
 	duckDBConn, err := sql.Open("duckdb", dbPath)
 
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(fmt.Sprintf("Could not establish DuckDB connection: %s", err))
+		return nil, err
 	}
 
 	err = duckDBConn.Ping()
 
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(fmt.Sprintf("Could not ping DuckDB: %s", err))
+		return nil, err
 	}
 
 	// Store in map
@@ -104,5 +117,5 @@ func GetDuckDB(feedVersion string) *sql.DB {
 		lastAccess: time.Now(),
 	}
 
-	return duckDBConn
+	return duckDBConn, nil
 }

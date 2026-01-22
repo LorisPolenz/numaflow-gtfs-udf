@@ -1,7 +1,8 @@
 package helpers
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 )
 
@@ -15,7 +16,8 @@ func VerifyEnv() {
 
 	for _, v := range requiredVars {
 		if _, exists := os.LookupEnv(v); !exists {
-			log.Fatalf("Environment variable %s is not set\n", v)
+			slog.Error(fmt.Sprintf("Environment variable %s is not set\n", v))
+			os.Exit(1)
 		}
 	}
 }

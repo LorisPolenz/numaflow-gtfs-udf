@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"log/slog"
 	"numaflow_gtfs_udf/duckdb"
 	"numaflow_gtfs_udf/helpers"
+	"os"
 
 	"github.com/numaproj/numaflow-go/pkg/mapper"
 )
@@ -13,28 +16,28 @@ import (
 func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 	msg := d.Value()
 
-	log.Printf("Processing msg with len: %d", len(msg))
+	slog.Info(fmt.Sprintf("Processing msg with len: %d", len(msg)))
 
 	feedEntity, err := helpers.UnmarshallFeedEntity(msg)
 
-	log.Printf("Processing record with FeedVersion: %s", feedEntity.GetFeedVersion())
+	slog.Info(fmt.Sprintf("Processing record with FeedVersion: %s", feedEntity.GetFeedVersion()))
 
-	id, name := duckdb.TestDBConnection(feedEntity.GetFeedVersion())
+	id, name, err := duckdb.TestDBConnection(feedEntity.GetFeedVersion())
 
-	log.Printf("From DuckDB - id: %s, name: %s\n", id, name)
+	slog.Info(fmt.Sprintf("From DuckDB - id: %s, name: %s\n", id, name))
 
 	if err != nil {
-		log.Panic("Failed to unmarshal feed entity: ", err)
+		log.Print("Failed to unmarshal feed entity: ", err)
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
-	log.Printf("Entity - id: %s", feedEntity.GetId())
-	log.Printf("StopTimeUpdate - Count %d, ", len(feedEntity.TripUpdate.GetStopTimeUpdate()))
+	slog.Info(fmt.Sprintf("Entity - id: %s", feedEntity.GetId()))
+	slog.Info(fmt.Sprintf("StopTimeUpdate - Count %d, ", len(feedEntity.TripUpdate.GetStopTimeUpdate())))
 
 	feedEntityJson, err := json.Marshal(feedEntity)
 
 	if err != nil {
-		log.Panic("Failed to marshal feed entity: ", err)
+		slog.Info(fmt.Sprintf("Failed to marshal feed entity: ", err))
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
@@ -48,6 +51,7 @@ func main() {
 	err := mapper.NewServer(mapper.MapperFunc(mapFn)).Start(context.Background())
 
 	if err != nil {
-		log.Panic("Failed to start map function server: ", err)
+		slog.Error(fmt.Sprintf("Mapper server failed to start: %s", err))
+		os.Exit(1)
 	}
 }

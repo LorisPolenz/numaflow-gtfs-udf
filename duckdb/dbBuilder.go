@@ -5,7 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -13,7 +13,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-func fetch_gtfs_fp(feedVersion string) string {
+func fetch_gtfs_fp(feedVersion string) (string, error) {
 
 	endpoint := os.Getenv("S3_ENDPOINT")
 	accessKeyID := os.Getenv("S3_ACCESS_KEY")
@@ -27,7 +27,8 @@ func fetch_gtfs_fp(feedVersion string) string {
 	})
 
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(fmt.Sprintf("Could not create Minio Client %s", err))
+		return "", err
 	}
 
 	bucketName := os.Getenv("GTFS_FP_BUCKET")
@@ -38,18 +39,20 @@ func fetch_gtfs_fp(feedVersion string) string {
 	err = minioClient.FGetObject(context.Background(), bucketName, objectName, localFilePath, minio.GetObjectOptions{})
 
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(fmt.Sprintf("Could not fetch S3 Object %s", err))
+		return "", err
 	}
 
-	return localFilePath
+	return localFilePath, nil
 
 }
 
-func extractCSVFiles(localPath string, relevantFiles []string) {
+func extractCSVFiles(localPath string, relevantFiles []string) error {
 	reader, err := zip.OpenReader(localPath)
 
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(fmt.Sprintf("Could not open CSV File %s", err))
+		return err
 	}
 
 	for _, file := range reader.File {
@@ -58,25 +61,28 @@ func extractCSVFiles(localPath string, relevantFiles []string) {
 				continue
 			}
 
-			fmt.Println("Unpacking file:", file.Name)
+			slog.Info(fmt.Sprintf("Unpacking file: %s", file.Name))
 
 			destPath := fmt.Sprintf("./tmp/%s", file.Name)
 			destFile, err := os.Create(destPath)
 
 			if err != nil {
-				log.Fatalln(err)
+				slog.Error(fmt.Sprintf("Could not write extracted file: %s", err))
+				return err
 			}
 
 			srcFile, err := file.Open()
 
 			if err != nil {
-				log.Fatalln(err)
+				slog.Error(fmt.Sprintf("Could not read extracted file: %s", err))
+				return err
 			}
 
 			_, err = destFile.ReadFrom(srcFile)
 
 			if err != nil {
-				log.Fatalln(err)
+				slog.Error(fmt.Sprintf("Could not read extracted file: %s", err))
+				return err
 			}
 
 			destFile.Close()
@@ -85,24 +91,31 @@ func extractCSVFiles(localPath string, relevantFiles []string) {
 	}
 
 	reader.Close()
+	return nil
 }
 
-func buildDuckDB(feedVersion string, localPath string) string {
+func buildDuckDB(feedVersion string, localPath string) (string, error) {
 	// Placeholder for building DuckDB from GTFS feed
-	fmt.Printf("Building DuckDB for feed version %s from file %s\n", feedVersion, localPath)
+	slog.Info(fmt.Sprintf("Building DuckDB for feed version %s from file %s\n", feedVersion, localPath))
 
 	relevantFiles := []string{
 		"stop_times.txt",
 		"stops.txt",
 	}
 
-	extractCSVFiles(localPath, relevantFiles)
+	err := extractCSVFiles(localPath, relevantFiles)
+
+	if err != nil {
+		slog.Error(fmt.Sprintf("Could not extract CSV files: %s", err))
+		return "", err
+	}
 
 	dbPath := fmt.Sprintf("%s_feed.db", feedVersion)
 	duckDBConn, err := sql.Open("duckdb", dbPath)
 
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(fmt.Sprintf("Could not open DuckDB: %s", err))
+		return "", err
 	}
 
 	defer duckDBConn.Close()
@@ -116,20 +129,31 @@ func buildDuckDB(feedVersion string, localPath string) string {
 	err = os.RemoveAll("./tmp/")
 
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(fmt.Sprintf("Could not remove tmp dir: %s", err))
+		return "", err
 	}
 
-	return dbPath
+	return dbPath, nil
 }
 
-func BuildNewFeedVersion(feedVersion string) string {
-	localPath := fetch_gtfs_fp(feedVersion)
+func BuildNewFeedVersion(feedVersion string) (string, error) {
+	localPath, err := fetch_gtfs_fp(feedVersion)
 
-	log.Printf("Downloaded GTFS feed to: %s\n", localPath)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error fetching GTFS feed for version %s: %v\n", feedVersion, err))
+		return "", err
+	}
 
-	dbPath := buildDuckDB(feedVersion, localPath)
+	slog.Info(fmt.Sprintf("Downloaded GTFS feed to: %s\n", localPath))
 
-	fmt.Printf("DuckDB built at path: %s\n", dbPath)
+	dbPath, err := buildDuckDB(feedVersion, localPath)
 
-	return dbPath
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error building DuckDB for feed version %s: %v\n", feedVersion, err))
+		return "", err
+	}
+
+	slog.Info(fmt.Sprintf("DuckDB built at path: %s\n", dbPath))
+
+	return dbPath, nil
 }

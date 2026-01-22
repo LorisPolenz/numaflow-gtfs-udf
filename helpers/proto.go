@@ -3,7 +3,8 @@ package helpers
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
+	"fmt"
+	"log/slog"
 )
 
 type TransitFeedEntity struct {
@@ -24,7 +25,7 @@ func UnmarshallFeedEntity(data []byte) (*TransitFeedEntity, error) {
 	gobDec := gob.NewDecoder(bytes.NewBuffer(data))
 
 	if err := gobDec.Decode(&feedEntity); err != nil {
-		log.Fatalln("Failed to unmarshal feed entity:", err)
+		slog.Error(fmt.Sprintf("Failed to unmarshal feed entity:", err))
 		return nil, err
 	}
 
