@@ -20,10 +20,6 @@ func fetch_gtfs_fp(feedVersion string) string {
 	secretAccessKey := os.Getenv("S3_SECRET_KEY")
 	useSSL := true
 
-	fmt.Println(endpoint)
-	fmt.Println(accessKeyID)
-	fmt.Println(secretAccessKey)
-
 	// Initialize minio client object.
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
