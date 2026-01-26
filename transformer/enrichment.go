@@ -2,6 +2,7 @@ package transformer
 
 import (
 	"numaflow_gtfs_udf/duckdb"
+	"strings"
 )
 
 type EnrichStopTimesByTripID struct {
@@ -44,7 +45,10 @@ func FetchStopTimesByTripID(feedVersion string, tripID string) (map[string]StopT
 		if err != nil {
 			return nil, err
 		}
-		stopTimes[stopTime.StopID] = stopTime
+
+		stopIDParts := strings.Split(stopTime.StopID, ":")
+
+		stopTimes[stopIDParts[0]] = stopTime
 	}
 
 	if err = rows.Err(); err != nil {
