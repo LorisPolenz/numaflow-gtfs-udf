@@ -22,6 +22,21 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
+	if feedEntity.TripUpdate.GetTrip() == nil {
+		slog.Debug("No Trip found in TripUpdate")
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+	}
+
+	p0 := pipeline.NewPipeline("Enrich Feed Entity Pipeline")
+
+	enrichRoute := transformer.NewEnrichRouteByID(feedEntity.TripUpdate.Trip.GetRouteId(), feedEntity.GetFeedVersion())
+	enrichTrip := transformer.NewEnrichTripByID(feedEntity.TripUpdate.Trip.GetTripId(), feedEntity.GetFeedVersion())
+
+	p0.
+		AddStage("enrich Route by ID", enrichRoute).
+		AddStage("enrich Trip by ID", enrichTrip)
+	p0.Run()
+
 	enrichedStopTimeUpdates := []helpers.EnrichedStopTimeUpdate{}
 
 	stopTimes, err := transformer.FetchStopTimesByTripID(feedEntity.GetFeedVersion(), feedEntity.TripUpdate.Trip.GetTripId())
@@ -38,21 +53,23 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		p2 := pipeline.NewPipeline("Enrich Stop Name Pipeline")
 
+		enrichStopName := transformer.NewEnrichStopByID(splitStopID.Parts[0], feedEntity.GetFeedVersion())
 		enrichStopTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0], feedEntity.GetFeedVersion())
 
 		p2.
+			AddStage("enrich Stop Name by ID", enrichStopName).
 			AddStage("enrich Stop Times by Trip ID", enrichStopTime)
 
 		p2.Run()
 
 		slog.Info("Enriched Stop Time", "stop_time", enrichStopTime.StopTime.StopID, "stop_id", enrichStopTime.StopTime.StopID)
 
-		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, enrichStopTime.StopTime, stu.GetScheduleRelationship().String())
+		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, *enrichStopName.Stop, *enrichStopTime.StopTime, stu.GetScheduleRelationship().String())
 
 		enrichedStopTimeUpdates = append(enrichedStopTimeUpdates, *enrichedStopTimeUpdate)
 	}
 
-	enrichedTripUpdate := helpers.NewEnrichedTripUpdate(feedEntity.TripUpdate, enrichedStopTimeUpdates)
+	enrichedTripUpdate := helpers.NewEnrichedTripUpdate(feedEntity.TripUpdate, enrichedStopTimeUpdates, enrichRoute.Route, enrichTrip.Trip)
 	enrichedFeedEntity := helpers.NewEnrichedFeedEntity(&feedEntity, *enrichedTripUpdate)
 
 	enrichedFeedEntityJson, err := json.Marshal(enrichedFeedEntity)
