@@ -45,7 +45,9 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		p2.Run()
 
-		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, enrichTripTime.StopTime, stu.ScheduleRelationship.String())
+		slog.Info("Enriched Stop Time", "stop_time", enrichTripTime.StopTime.StopID, "stop_id", enrichTripTime.StopTime.StopID)
+
+		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, enrichTripTime.StopTime, stu.GetScheduleRelationship().String())
 
 		enrichedStopTimeUpdates = append(enrichedStopTimeUpdates, *enrichedStopTimeUpdate)
 	}
