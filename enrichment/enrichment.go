@@ -2,6 +2,7 @@ package enrichment
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"numaflow_gtfs_udf/helpers"
 	"numaflow_gtfs_udf/pipeline"
@@ -55,6 +56,8 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		enrichStopName := transformer.NewEnrichStopByID(splitStopID.Parts[0], feedEntity.GetFeedVersion())
 		enrichStopTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0], feedEntity.GetFeedVersion())
+
+		fmt.Println("Enriching Stop ID:", splitStopID.Parts[0])
 
 		p2.
 			AddStage("enrich Stop Name by ID", enrichStopName).

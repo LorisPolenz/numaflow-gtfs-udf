@@ -1,6 +1,8 @@
 package transformer
 
 import (
+	"fmt"
+	"log/slog"
 	"numaflow_gtfs_udf/duckdb"
 	"strings"
 )
@@ -219,6 +221,7 @@ func (e *EnrichStopNameByID) Transform() {
 	stop, err := FetchStopByID(e.feedVersion, e.StopID)
 
 	if err != nil {
+		slog.Warn(fmt.Sprintf("Could not fetch Stop %s: %s", e.StopID, err))
 		return
 	}
 	e.Stop = stop
@@ -228,6 +231,7 @@ func (e *EnrichRouteByID) Transform() {
 	route, err := FetchRouteByID(e.feedVersion, e.RouteID)
 
 	if err != nil {
+		slog.Warn(fmt.Sprintf("Could not fetch Route %s : %s", e.RouteID, err))
 		return
 	}
 	e.Route = route
@@ -237,6 +241,7 @@ func (e *EnrichTripByID) Transform() {
 	trip, err := FetchTripByID(e.feedVersion, e.TripID)
 
 	if err != nil {
+		slog.Warn(fmt.Sprintf("Could not fetch Trip %s : %s", e.TripID, err))
 		return
 	}
 	e.Trip = trip
