@@ -28,8 +28,6 @@ type IndexDocument struct {
 
 func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
-	var messagesBuilder = mapper.MessagesBuilder()
-
 	if feedEntity.GetTripUpdate() == nil {
 		slog.Debug("No TripUpdate found in FeedEntity")
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
@@ -97,7 +95,10 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 	enrichedTripUpdate := helpers.NewEnrichedTripUpdate(feedEntity.TripUpdate, enrichedStopTimeUpdates, enrichRoute.Route, enrichTrip.Trip)
 	enrichedFeedEntity := helpers.NewEnrichedFeedEntity(&feedEntity, *enrichedTripUpdate)
 
+	var messagesBuilder = mapper.MessagesBuilder()
+
 	for _, stu := range enrichedFeedEntity.EnrichedTripUpdate.EnrichedStopTimeUpdates {
+		slog.Info("Preparing Index Document for Stop Time Update", "stop_time", stu.StopTime.StopID, "stop_id", stu.Stop.StopID)
 		doc := IndexDocument{
 			EnrichedStopTimeUpdate: stu,
 			Route:                  enrichedFeedEntity.EnrichedTripUpdate.EnrichedRoute,
@@ -112,12 +113,14 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		docJson, err := json.Marshal(doc)
 
+		fmt.Println(string(docJson))
+
 		if err != nil {
 			slog.Error("Failed to marshal index document", "error", err)
 			continue
 		}
 
-		messagesBuilder.Append(mapper.NewMessage(docJson))
+		messagesBuilder = messagesBuilder.Append(mapper.NewMessage(docJson))
 	}
 
 	slog.Info(fmt.Sprintf("Message Items: %d", len(messagesBuilder.Items())))
