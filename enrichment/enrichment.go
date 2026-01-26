@@ -38,16 +38,16 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		p2 := pipeline.NewPipeline("Enrich Stop Name Pipeline")
 
-		enrichTripTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0], feedEntity.GetFeedVersion())
+		enrichStopTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0], feedEntity.GetFeedVersion())
 
 		p2.
-			AddStage("enrich Stop Times by Trip ID", enrichTripTime)
+			AddStage("enrich Stop Times by Trip ID", enrichStopTime)
 
 		p2.Run()
 
-		slog.Info("Enriched Stop Time", "stop_time", enrichTripTime.StopTime.StopID, "stop_id", enrichTripTime.StopTime.StopID)
+		slog.Info("Enriched Stop Time", "stop_time", enrichStopTime.StopTime.StopID, "stop_id", enrichStopTime.StopTime.StopID)
 
-		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, enrichTripTime.StopTime, stu.GetScheduleRelationship().String())
+		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, enrichStopTime.StopTime, stu.GetScheduleRelationship().String())
 
 		enrichedStopTimeUpdates = append(enrichedStopTimeUpdates, *enrichedStopTimeUpdate)
 	}
