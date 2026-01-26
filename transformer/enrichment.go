@@ -16,9 +16,9 @@ type StopTimeDB struct {
 	ArrivalTime   string `json:"arrival_time"`
 	DepartureTime string `json:"departure_time"`
 	StopID        string `json:"stop_id"`
-	StopSequence  int    `json:"stop_sequence"`
-	PickupType    int    `json:"pickup_type"`
-	DropOffType   int    `json:"drop_off_type"`
+	StopSequence  string `json:"stop_sequence"`
+	PickupType    string `json:"pickup_type"`
+	DropOffType   string `json:"drop_off_type"`
 }
 
 func FetchStopTimesByTripID(feedVersion string, tripID string) (map[string]StopTimeDB, error) {
