@@ -28,6 +28,8 @@ type IndexDocument struct {
 
 func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
+	var messagesBuilder = mapper.MessagesBuilder()
+
 	if feedEntity.GetTripUpdate() == nil {
 		slog.Debug("No TripUpdate found in FeedEntity")
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
@@ -115,10 +117,10 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 			continue
 		}
 
-		mapper.MessagesBuilder().Append(mapper.NewMessage(docJson))
+		messagesBuilder.Append(mapper.NewMessage(docJson))
 	}
 
-	return mapper.MessagesBuilder()
+	return messagesBuilder
 
 	// slog.Info(fmt.Sprintf("Processing record with FeedVersion: %s", feedEntity.GetFeedVersion()))
 
