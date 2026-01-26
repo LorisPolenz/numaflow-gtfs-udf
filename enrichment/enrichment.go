@@ -120,6 +120,8 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		messagesBuilder.Append(mapper.NewMessage(docJson))
 	}
 
+	slog.Info(fmt.Sprintf("Message Items: %d", len(messagesBuilder.Items())))
+
 	return messagesBuilder
 
 	// slog.Info(fmt.Sprintf("Processing record with FeedVersion: %s", feedEntity.GetFeedVersion()))
