@@ -7,9 +7,24 @@ import (
 	"numaflow_gtfs_udf/helpers"
 	"numaflow_gtfs_udf/pipeline"
 	"numaflow_gtfs_udf/transformer"
+	"time"
 
 	"github.com/numaproj/numaflow-go/pkg/mapper"
 )
+
+type StopLocation struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
+}
+
+type IndexDocument struct {
+	helpers.EnrichedStopTimeUpdate
+	Route        transformer.RouteDB     `json:"route"`
+	TripEnriched transformer.TripDB      `json:"trip_enriched"`
+	Trip         *helpers.TripDescriptor `json:"trip"`
+	StopLocation StopLocation            `json:"stop_location"`
+	Timestamp    string                  `json:"@timestamp"`
+}
 
 func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
@@ -41,6 +56,11 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 	enrichedStopTimeUpdates := []helpers.EnrichedStopTimeUpdate{}
 
 	stopTimes, err := transformer.FetchStopTimesByTripID(feedEntity.GetFeedVersion(), feedEntity.TripUpdate.Trip.GetTripId())
+
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to fetch Stop Times for Trip ID %s: %s", feedEntity.TripUpdate.Trip.GetTripId(), err))
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+	}
 
 	for _, stu := range feedEntity.TripUpdate.StopTimeUpdate {
 		p1 := pipeline.NewPipeline("Process Stop Time Update")
@@ -75,14 +95,30 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 	enrichedTripUpdate := helpers.NewEnrichedTripUpdate(feedEntity.TripUpdate, enrichedStopTimeUpdates, enrichRoute.Route, enrichTrip.Trip)
 	enrichedFeedEntity := helpers.NewEnrichedFeedEntity(&feedEntity, *enrichedTripUpdate)
 
-	enrichedFeedEntityJson, err := json.Marshal(enrichedFeedEntity)
+	for _, stu := range enrichedFeedEntity.EnrichedTripUpdate.EnrichedStopTimeUpdates {
+		doc := IndexDocument{
+			EnrichedStopTimeUpdate: stu,
+			Route:                  enrichedFeedEntity.EnrichedTripUpdate.EnrichedRoute,
+			TripEnriched:           enrichedFeedEntity.EnrichedTripUpdate.EnrichedTrip,
+			Trip:                   feedEntity.GetTripUpdate().GetTrip(),
+			Timestamp:              time.Now().UTC().Format(time.RFC3339),
+			StopLocation: StopLocation{
+				Lat: stu.Stop.Lat,
+				Lon: stu.Stop.Lon,
+			},
+		}
 
-	if err != nil {
-		slog.Error("Failed to marshal enriched feed entity", "error", err)
-		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+		docJson, err := json.Marshal(doc)
+
+		if err != nil {
+			slog.Error("Failed to marshal index document", "error", err)
+			continue
+		}
+
+		mapper.MessagesBuilder().Append(mapper.NewMessage(docJson))
 	}
 
-	return mapper.MessagesBuilder().Append(mapper.NewMessage(enrichedFeedEntityJson))
+	return mapper.MessagesBuilder()
 
 	// slog.Info(fmt.Sprintf("Processing record with FeedVersion: %s", feedEntity.GetFeedVersion()))
 
