@@ -4,16 +4,6 @@ import (
 	"numaflow_gtfs_udf/transformer"
 )
 
-type StopTimeCSV struct {
-	TripID        string `json:"trip_id"`
-	ArrivalTime   string `json:"arrival_time"`
-	DepartureTime string `json:"departure_time"`
-	StopID        string `json:"stop_id"`
-	StopSequence  string `json:"stop_sequence"`
-	PickupType    string `json:"pickup_type"`
-	DropOffType   string `json:"drop_off_type"`
-}
-
 type EnrichedFeedMessage struct {
 	*FeedMessage
 	EnrichedFeedEntities []EnrichedFeedEntity `json:"entity"`

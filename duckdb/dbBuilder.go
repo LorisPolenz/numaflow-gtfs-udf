@@ -101,6 +101,8 @@ func buildDuckDB(feedVersion string, localPath string) (string, error) {
 	relevantFiles := []string{
 		"stop_times.txt",
 		"stops.txt",
+		"trips.txt",
+		"routes.txt",
 	}
 
 	err := extractCSVFiles(localPath, relevantFiles)
