@@ -8,6 +8,7 @@ import (
 	"numaflow_gtfs_udf/enrichment"
 	"numaflow_gtfs_udf/helpers"
 	"os"
+	"time"
 
 	"github.com/numaproj/numaflow-go/pkg/mapper"
 )
@@ -24,7 +25,11 @@ func mapFn(_ context.Context, _ []string, d mapper.Datum) mapper.Messages {
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
+	currentTime := time.Now()
+
 	messages := enrichment.EnrichFeedEntity(*feedEntity)
+
+	slog.Info(fmt.Sprintf("Processed msg with len: %d in %s", len(msg), time.Since(currentTime)))
 
 	return messages
 }
