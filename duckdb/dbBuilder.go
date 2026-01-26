@@ -13,6 +13,20 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+var non_null_list = map[string][]string{
+	"stops": []string{
+		"location_type",
+		"parent_station",
+		"platform_code",
+	},
+	"trips": []string{
+		"block_id", "original_trip_id", "hints",
+	},
+	"routes": []string{
+		"route_long_name",
+	},
+}
+
 func fetch_gtfs_fp(feedVersion string) (string, error) {
 
 	endpoint := os.Getenv("S3_ENDPOINT")
@@ -123,9 +137,28 @@ func buildDuckDB(feedVersion string, localPath string) (string, error) {
 	defer duckDBConn.Close()
 
 	for _, fileName := range relevantFiles {
-		duckDBConn.Exec(
-			fmt.Sprintf("CREATE TABLE %s AS SELECT * FROM read_csv('./tmp/%s');", strings.Split(fileName, ".")[0], fileName),
-		)
+		tblName := strings.Split(fileName, ".")[0]
+		var query string
+
+		if valList, exists := non_null_list[tblName]; exists {
+			query = fmt.Sprintf(
+				"CREATE TABLE %s AS SELECT * FROM read_csv('./tmp/%s', force_not_null=[%s], all_varchar=True);",
+				tblName,
+				fileName,
+				strings.Join(valList, ","),
+			)
+
+		} else {
+			query = fmt.Sprintf(
+				"CREATE TABLE %s AS SELECT * FROM read_csv('./tmp/%s', all_varchar=True);",
+				tblName,
+				fileName,
+			)
+		}
+
+		slog.Debug(fmt.Sprintf("Executing Query: %s", query))
+
+		duckDBConn.Exec(query)
 	}
 
 	err = os.RemoveAll("./tmp/")
