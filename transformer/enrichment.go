@@ -14,9 +14,9 @@ type EnrichStopTimesByTripID struct {
 }
 
 type EnrichStopNameByID struct {
-	feedVersion string
-	StopID      string
-	Stop        *StopDB
+	stops  map[string]StopDB
+	StopID string
+	Stop   *StopDB
 }
 
 type EnrichRouteByID struct {
@@ -109,6 +109,53 @@ func FetchStopTimesByTripID(feedVersion string, tripID string) (map[string]StopT
 	return stopTimes, nil
 }
 
+func FetchStopByStopTimes(feedVersion string, stopTimes map[string]StopTimeDB) (map[string]StopDB, error) {
+	stopIDs := []string{}
+
+	for _, stopTime := range stopTimes {
+		splitStopID := strings.Split(stopTime.StopID, ":")
+
+		stopIDs = append(stopIDs, fmt.Sprintf("'Parent%s'", splitStopID[0]))
+	}
+
+	query := fmt.Sprintf("SELECT stop_id, stop_name, stop_lat, stop_lon, location_type, parent_station, platform_code FROM stops WHERE stop_id IN (%s);", strings.Join(stopIDs, ","))
+
+	slog.Debug(query)
+
+	db, err := duckdb.GetDuckDB(feedVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stops := make(map[string]StopDB)
+
+	for rows.Next() {
+		var stop StopDB
+
+		err := rows.Scan(&stop.StopID, &stop.StopName, &stop.Lat, &stop.Lon, &stop.LocationType, &stop.ParentStation, &stop.PlatformCode)
+		if err != nil {
+			return nil, err
+		}
+
+		stopIDParts := strings.Split(stop.StopID, "Parent")
+
+		stops[stopIDParts[1]] = stop
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return stops, nil
+}
+
 func FetchRouteByID(feedVersion string, routeID string) (*RouteDB, error) {
 	var route RouteDB
 
@@ -195,12 +242,12 @@ func FetchTripByID(feedVersion string, tripID string) (*TripDB, error) {
 }
 
 // Contruct type
-func NewEnrichStopTimeByTripID(stopTimes map[string]StopTimeDB, stopID string, feedVersion string) *EnrichStopTimesByTripID {
+func NewEnrichStopTimeByTripID(stopTimes map[string]StopTimeDB, stopID string) *EnrichStopTimesByTripID {
 	return &EnrichStopTimesByTripID{stopTimes: stopTimes, StopID: stopID}
 }
 
-func NewEnrichStopByID(stopID string, feedVersion string) *EnrichStopNameByID {
-	return &EnrichStopNameByID{StopID: stopID, feedVersion: feedVersion}
+func NewEnrichStopByID(stops map[string]StopDB, stopID string) *EnrichStopNameByID {
+	return &EnrichStopNameByID{StopID: stopID, stops: stops}
 }
 
 func NewEnrichRouteByID(routeID string, feedVersion string) *EnrichRouteByID {
@@ -218,13 +265,9 @@ func (e *EnrichStopTimesByTripID) Transform() {
 }
 
 func (e *EnrichStopNameByID) Transform() {
-	stop, err := FetchStopByID(e.feedVersion, e.StopID)
+	stop := e.stops[e.StopID]
 
-	if err != nil {
-		slog.Warn(fmt.Sprintf("Could not fetch Stop %s: %s", e.StopID, err))
-		return
-	}
-	e.Stop = stop
+	e.Stop = &stop
 }
 
 func (e *EnrichRouteByID) Transform() {

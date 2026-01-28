@@ -62,6 +62,13 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
+	stops, err := transformer.FetchStopByStopTimes(feedEntity.GetFeedVersion(), stopTimes)
+
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to fetch Stops for Stop Times of Trip ID %s: %s", feedEntity.TripUpdate.Trip.GetTripId(), err))
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+	}
+
 	for _, stu := range feedEntity.TripUpdate.StopTimeUpdate {
 		p1 := pipeline.NewPipeline("Process Stop Time Update")
 
@@ -74,8 +81,8 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		p2 := pipeline.NewPipeline("Enrich Stop Name Pipeline")
 
-		enrichStopName := transformer.NewEnrichStopByID(splitStopID.Parts[0], feedEntity.GetFeedVersion())
-		enrichStopTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0], feedEntity.GetFeedVersion())
+		enrichStopName := transformer.NewEnrichStopByID(stops, splitStopID.Parts[0])
+		enrichStopTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0])
 
 		fmt.Println("Enriching Stop ID:", splitStopID.Parts[0])
 
