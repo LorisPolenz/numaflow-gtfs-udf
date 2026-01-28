@@ -183,34 +183,6 @@ func FetchRouteByID(feedVersion string, routeID string) (*RouteDB, error) {
 	return &route, nil
 }
 
-func FetchStopByID(feedVersion string, sourceStopID string) (*StopDB, error) {
-	var stop StopDB
-
-	db, err := duckdb.GetDuckDB(feedVersion)
-
-	if err != nil {
-		return nil, err
-	}
-
-	row := db.QueryRow("SELECT stop_id, stop_name, stop_lat, stop_lon, location_type, parent_station, platform_code FROM stops WHERE stop_id = 'Parent" + sourceStopID + "' LIMIT 1;")
-
-	err = row.Scan(
-		&stop.StopID,
-		&stop.StopName,
-		&stop.Lat,
-		&stop.Lon,
-		&stop.LocationType,
-		&stop.ParentStation,
-		&stop.PlatformCode,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &stop, nil
-}
-
 func FetchTripByID(feedVersion string, tripID string) (*TripDB, error) {
 	var trip TripDB
 

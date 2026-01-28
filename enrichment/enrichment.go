@@ -51,7 +51,10 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 	p0.
 		AddStage("enrich Route by ID", enrichRoute).
 		AddStage("enrich Trip by ID", enrichTrip)
+
+	now := time.Now()
 	p0.Run()
+	slog.Info(fmt.Sprintf("Enrichment Pipeline p0 completed in %s", time.Since(now)))
 
 	if enrichRoute.Route == nil {
 		slog.Error(fmt.Sprintf("Failed to enrich Route for Route ID %s", feedEntity.TripUpdate.Trip.GetRouteId()))
@@ -65,6 +68,8 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 	enrichedStopTimeUpdates := []helpers.EnrichedStopTimeUpdate{}
 
+	now = time.Now()
+
 	stopTimes, err := transformer.FetchStopTimesByTripID(feedEntity.GetFeedVersion(), feedEntity.TripUpdate.Trip.GetTripId())
 
 	if err != nil {
@@ -72,12 +77,18 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
 
+	slog.Info(fmt.Sprintf("Enrichment stoptimes enrichment completed in %s", time.Since(now)))
+
 	stops, err := transformer.FetchStopByStopTimes(feedEntity.GetFeedVersion(), stopTimes)
+
+	now = time.Now()
 
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to fetch Stops for Stop Times of Trip ID %s: %s", feedEntity.TripUpdate.Trip.GetTripId(), err))
 		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
 	}
+
+	slog.Info(fmt.Sprintf("Enrichment stops enrichment completed in %s", time.Since(now)))
 
 	for _, stu := range feedEntity.TripUpdate.StopTimeUpdate {
 		p1 := pipeline.NewPipeline("Process Stop Time Update")
@@ -86,7 +97,6 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		p1.
 			AddStage("split Stop ID by ':'", splitStopID)
-
 		p1.Run()
 
 		p2 := pipeline.NewPipeline("Enrich Stop Name Pipeline")
@@ -94,15 +104,15 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		enrichStopName := transformer.NewEnrichStopByID(stops, splitStopID.Parts[0])
 		enrichStopTime := transformer.NewEnrichStopTimeByTripID(stopTimes, splitStopID.Parts[0])
 
-		fmt.Println("Enriching Stop ID:", splitStopID.Parts[0])
-
 		p2.
 			AddStage("enrich Stop Name by ID", enrichStopName).
 			AddStage("enrich Stop Times by Trip ID", enrichStopTime)
 
+		now = time.Now()
 		p2.Run()
+		slog.Info(fmt.Sprintf("Enrichment pipline p2 completed in %s", time.Since(now)))
 
-		slog.Info("Enriched Stop Time", "stop_time", enrichStopTime.StopTime.StopID, "stop_id", enrichStopTime.StopTime.StopID)
+		slog.Debug("Enriched Stop Time", "stop_time", enrichStopTime.StopTime.StopID, "stop_id", enrichStopTime.StopTime.StopID)
 
 		enrichedStopTimeUpdate := helpers.NewEnrichedStopTimeUpdate(stu, *enrichStopName.Stop, *enrichStopTime.StopTime, stu.GetScheduleRelationship().String())
 
@@ -112,10 +122,12 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 	enrichedTripUpdate := helpers.NewEnrichedTripUpdate(feedEntity.TripUpdate, enrichedStopTimeUpdates, enrichRoute.Route, enrichTrip.Trip)
 	enrichedFeedEntity := helpers.NewEnrichedFeedEntity(&feedEntity, *enrichedTripUpdate)
 
+	now = time.Now()
+
 	var messagesBuilder = mapper.MessagesBuilder()
 
 	for _, stu := range enrichedFeedEntity.EnrichedTripUpdate.EnrichedStopTimeUpdates {
-		slog.Info("Preparing Index Document for Stop Time Update", "stop_time", stu.StopTime.StopID, "stop_id", stu.Stop.StopID)
+		slog.Debug("Preparing Index Document for Stop Time Update", "stop_time", stu.StopTime.StopID, "stop_id", stu.Stop.StopID)
 		doc := IndexDocument{
 			EnrichedStopTimeUpdate: stu,
 			Route:                  enrichedFeedEntity.EnrichedTripUpdate.EnrichedRoute,
@@ -130,8 +142,6 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 
 		docJson, err := json.Marshal(doc)
 
-		fmt.Println(string(docJson))
-
 		if err != nil {
 			slog.Error("Failed to marshal index document", "error", err)
 			continue
@@ -140,7 +150,7 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		messagesBuilder = messagesBuilder.Append(mapper.NewMessage(docJson))
 	}
 
-	slog.Info(fmt.Sprintf("Message Items: %d", len(messagesBuilder.Items())))
+	slog.Info(fmt.Sprintf("Time building took in %s", time.Since(now)))
 
 	return messagesBuilder
 
