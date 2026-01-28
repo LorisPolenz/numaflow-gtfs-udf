@@ -275,7 +275,7 @@ func (e *EnrichRouteByID) Transform() {
 
 	if err != nil {
 		slog.Warn(fmt.Sprintf("Could not fetch Route %s : %s", e.RouteID, err))
-		return
+		e.Route = nil
 	}
 	e.Route = route
 }
@@ -285,7 +285,7 @@ func (e *EnrichTripByID) Transform() {
 
 	if err != nil {
 		slog.Warn(fmt.Sprintf("Could not fetch Trip %s : %s", e.TripID, err))
-		return
+		e.Trip = nil
 	}
 	e.Trip = trip
 }

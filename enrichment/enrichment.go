@@ -53,6 +53,16 @@ func EnrichFeedEntity(feedEntity helpers.TransitFeedEntity) mapper.Messages {
 		AddStage("enrich Trip by ID", enrichTrip)
 	p0.Run()
 
+	if enrichRoute.Route == nil {
+		slog.Error(fmt.Sprintf("Failed to enrich Route for Route ID %s", feedEntity.TripUpdate.Trip.GetRouteId()))
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+	}
+
+	if enrichTrip.Trip == nil {
+		slog.Error(fmt.Sprintf("Failed to enrich Trip for Trip ID %s", feedEntity.TripUpdate.Trip.GetTripId()))
+		return mapper.MessagesBuilder().Append(mapper.MessageToDrop())
+	}
+
 	enrichedStopTimeUpdates := []helpers.EnrichedStopTimeUpdate{}
 
 	stopTimes, err := transformer.FetchStopTimesByTripID(feedEntity.GetFeedVersion(), feedEntity.TripUpdate.Trip.GetTripId())
